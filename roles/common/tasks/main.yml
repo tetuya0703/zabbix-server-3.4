@@ -1,0 +1,45 @@
+---
+# tasks file for common
+- name: policy change selinux for python Library
+  yum:
+    name: "{{ item }}"
+  with_items:
+    - libselinux-python
+    - policycoreutils-python
+
+- name: selinux disable
+  selinux: 
+    policy: targeted
+    state: permissive
+  register: common_make_selinux_permissive
+
+- name: debug common_make_selinux_permissive
+  debug: msg="{{ common_make_selinux_permissive.msg }}"
+
+- block:
+  - name: OS is restarted as the need arises at the time of selinux modifying condition
+    shell: sleep 2 && shutdown -r now "Ansible reboot"
+    async: 1
+    poll: 0
+    changed_when: true
+
+  - name: wait reboot
+    local_action: wait_for
+    args:
+      host: "{{ ansible_host|default(inventory_hostname) }}"
+      port: "{{ ansible_ssh_port|default(22) }}"
+      state: started
+      search_regex: OpenSSH
+      delay: 30
+      timeout: 600
+    become: false
+
+  when: common_make_selinux_permissive|changed and 'Config SELinux state changed' in common_make_selinux_permissive.msg
+
+- name: setting for firewalld to httpd
+  firewalld:
+    port: "80/tcp"
+    permanent: true
+    state: enabled
+    immediate: true
+    

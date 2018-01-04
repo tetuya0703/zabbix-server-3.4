@@ -1,0 +1,9 @@
+---
+# This playbook deploys the ZABBIX server. 
+- hosts: zabbix-server-mysql-standalone
+  become: yes
+  #remote_user: root
+
+  roles:
+    - common
+    - zabbix-server-mysql-standalone
